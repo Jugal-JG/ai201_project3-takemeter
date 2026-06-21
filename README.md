@@ -1,7 +1,10 @@
 # TakeMeter — r/soccer Discourse Classifier
+
 ### AI201 · Project 3
 
 Fine-tuning `distilbert-base-uncased` to classify r/soccer posts by discourse type, compared against a zero-shot Groq baseline.
+
+Demo Link: https://drive.google.com/file/d/1MC9RTFuMF-5-9LaYmw2867ducOjCQrCo/view?usp=drive_link
 
 ---
 
@@ -16,14 +19,17 @@ Fine-tuning `distilbert-base-uncased` to classify r/soccer posts by discourse ty
 Three mutually exclusive labels covering ~92% of r/soccer top-level posts:
 
 **`analysis`** — Structured argument grounded in specific, verifiable evidence (stats, tactical observations, historical comparisons). The claim stands even without emotional framing.
+
 - *"City's PPDA has gone from 9.2 to 14.6 since Rodri's injury — they're pressing without cover and conceding 3+ in consecutive away games. The defensive structure has completely broken down."*
 - *"Arsenal's front three works against high defensive lines because Saka drifts inside to create a central overload while Martinelli pins the fullback. This rotational pattern has generated 3.2 xG per game in their last four away fixtures."*
 
 **`hot_take`** — Bold, confident claim stated without meaningful supporting evidence. Opinion-first; any evidence cited is decorative or cherry-picked.
+
 - *"Guardiola is the most overrated manager in football history. Give any competent top-level coach City's financial backing and they'd win the same trophies. The obsession with him is a media construction."*
 - *"Mbappé has been carried by elite teams his entire career and goes missing in the biggest finals. Name one truly decisive performance when it mattered most. Can't."*
 
 **`reaction`** — Immediate emotional response to a specific ongoing or recently completed event — a goal, result, transfer, or controversial decision. Captures a feeling in the moment rather than building an argument.
+
 - *"HE SCORED FROM THAT ANGLE?? BELLINGHAM IS ACTUALLY INSANE. I have no words. Best player on the planet right now."*
 - *"That referee decision just killed the Champions League final. The worst call I've ever seen in a major match. Absolutely gutted."*
 
@@ -47,28 +53,26 @@ Decision rule: Label based on the post's primary contribution. If the analytical
 
 **Split:**
 
-| Split | Size |
-|---|---|
-| Train | 147 (70%) |
-| Validation | 32 (15%) |
-| Test | 32 (15%) |
+| Split      | Size      |
+| ---------- | --------- |
+| Train      | 147 (70%) |
+| Validation | 32 (15%)  |
+| Test       | 32 (15%)  |
 
 **Label distribution:**
 
-| Label | Count | % |
-|---|---|---|
-| `analysis` | 70 | 33.2% |
-| `hot_take` | 70 | 33.2% |
-| `reaction` | 71 | 33.6% |
+| Label        | Count | %     |
+| ------------ | ----- | ----- |
+| `analysis` | 70    | 33.2% |
+| `hot_take` | 70    | 33.2% |
+| `reaction` | 71    | 33.6% |
 
 **Labeling process:** All 211 examples were AI-generated to reflect authentic linguistic patterns, then reviewed for quality and label consistency. Edge case decision rules (see planning.md) were applied to resolve ambiguous examples.
 
 **Difficult annotation examples:**
 
 1. *"Trent Alexander-Arnold is a liability in every high-pressure match. His offensive numbers are good, but you can target him every time against a decent winger and Liverpool are consistently exposed."* — Sat between `analysis` (references stats, targeting strategy) and `hot_take` (no cited match data, "consistently exposed" is assertion not demonstration). Labeled `hot_take`: bold general claim without quantified evidence.
-
 2. *"HAALAND WITH HIS HAT TRICK IN 12 MINUTES. This man is not human. He is some kind of football robot sent from the future to end all discussion."* — Sat between `hot_take` ("end all discussion") and `reaction` (all-caps opener, specific just-completed event). Labeled `reaction`: hyperbolic in-the-moment language anchored to a specific event.
-
 3. *"The reason England fail every tournament is the mental pressure of playing for England. The players are fine technically — they're Premier League starters. They shrink under the national team pressure in a way they simply don't with their clubs."* — Has causal structure and acknowledges technical quality, but asserts "mental pressure" without evidence. Labeled `hot_take`: a structured-sounding claim argued entirely by assertion.
 
 ---
@@ -81,13 +85,13 @@ Decision rule: Label based on the post's primary contribution. If the analytical
 
 **Hyperparameters:**
 
-| Parameter | Value | Rationale |
-|---|---|---|
-| Learning rate | 2e-5 | Standard starting point for BERT-family fine-tuning; lower rates stabilize training on small datasets |
-| Epochs | 3 | Sufficient for convergence on ~147 examples without overfitting |
-| Batch size (train) | 16 | Fits T4 GPU comfortably with 256-token max length |
-| Weight decay | 0.01 | Light regularization appropriate for small datasets |
-| Max sequence length | 256 | Covers >95% of r/soccer posts without truncation |
+| Parameter           | Value | Rationale                                                                                             |
+| ------------------- | ----- | ----------------------------------------------------------------------------------------------------- |
+| Learning rate       | 2e-5  | Standard starting point for BERT-family fine-tuning; lower rates stabilize training on small datasets |
+| Epochs              | 3     | Sufficient for convergence on ~147 examples without overfitting                                       |
+| Batch size (train)  | 16    | Fits T4 GPU comfortably with 256-token max length                                                     |
+| Weight decay        | 0.01  | Light regularization appropriate for small datasets                                                   |
+| Max sequence length | 256   | Covers >95% of r/soccer posts without truncation                                                      |
 
 ---
 
@@ -96,6 +100,7 @@ Decision rule: Label based on the post's primary contribution. If the analytical
 **Model:** Groq `llama-3.3-70b-versatile` — zero-shot, no task-specific training.
 
 **Prompt used:**
+
 ```
 You are classifying posts from r/soccer, a football (soccer) discussion community.
 Assign each post to exactly one of the following categories.
@@ -132,36 +137,36 @@ reaction
 
 ## Results
 
-| Model | Accuracy | Macro F1 |
-|---|---|---|
-| Zero-shot baseline (Groq `llama-3.3-70b-versatile`) | 96.9% | 0.97 |
-| Fine-tuned DistilBERT | 87.5% | 0.86 |
+| Model                                                 | Accuracy | Macro F1 |
+| ----------------------------------------------------- | -------- | -------- |
+| Zero-shot baseline (Groq `llama-3.3-70b-versatile`) | 96.9%    | 0.97     |
+| Fine-tuned DistilBERT                                 | 87.5%    | 0.86     |
 
 **Per-class metrics — Groq zero-shot baseline:**
 
-| Label | Precision | Recall | F1 | Support |
-|---|---|---|---|---|
-| `analysis` | 0.92 | 1.00 | 0.96 | 11 |
-| `hot_take` | 1.00 | 0.90 | 0.95 | 10 |
-| `reaction` | 1.00 | 1.00 | 1.00 | 11 |
+| Label               | Precision      | Recall         | F1             | Support      |
+| ------------------- | -------------- | -------------- | -------------- | ------------ |
+| `analysis`        | 0.92           | 1.00           | 0.96           | 11           |
+| `hot_take`        | 1.00           | 0.90           | 0.95           | 10           |
+| `reaction`        | 1.00           | 1.00           | 1.00           | 11           |
 | **macro avg** | **0.97** | **0.97** | **0.97** | **32** |
 
 **Per-class metrics — fine-tuned DistilBERT:**
 
-| Label | Precision | Recall | F1 | Support |
-|---|---|---|---|---|
-| `analysis` | 0.85 | 1.00 | 0.92 | 11 |
-| `hot_take` | 1.00 | 0.60 | 0.75 | 10 |
-| `reaction` | 0.85 | 1.00 | 0.92 | 11 |
+| Label               | Precision      | Recall         | F1             | Support      |
+| ------------------- | -------------- | -------------- | -------------- | ------------ |
+| `analysis`        | 0.85           | 1.00           | 0.92           | 11           |
+| `hot_take`        | 1.00           | 0.60           | 0.75           | 10           |
+| `reaction`        | 0.85           | 1.00           | 0.92           | 11           |
 | **macro avg** | **0.90** | **0.87** | **0.86** | **32** |
 
 **Confusion matrix — fine-tuned DistilBERT (test set, n=32):**
 
-|  | Predicted: analysis | Predicted: hot_take | Predicted: reaction |
-|---|---|---|---|
-| **True: analysis** | 11 | 0 | 0 |
-| **True: hot_take** | 2 | 6 | 2 |
-| **True: reaction** | 0 | 0 | 11 |
+|                          | Predicted: analysis | Predicted: hot_take | Predicted: reaction |
+| ------------------------ | ------------------- | ------------------- | ------------------- |
+| **True: analysis** | 11                  | 0                   | 0                   |
+| **True: hot_take** | 2                   | 6                   | 2                   |
+| **True: reaction** | 0                   | 0                   | 11                  |
 
 ---
 
@@ -178,6 +183,7 @@ Every one of the 4 errors made by the fine-tuned model involved `hot_take` — 2
 **Why `hot_take` is the hard class:** `hot_take` occupies the structural middle of the label space. It shares surface features with both neighbors: it uses opinionated, confident language like `reaction`, and it sometimes deploys statistics or structured-sounding reasoning like `analysis`. The model can't rely on surface form alone to distinguish it — it needs to assess whether evidence is being used to *build* an argument (→ `analysis`) or merely *decorate* an assertion (→ `hot_take`).
 
 **Error 1 — `hot_take` predicted as `analysis`:**
+
 > *"The reason Germany lost to Japan and Costa Rica at the 2022 World Cup is simple: their arrogance. They expected to win without changing anything about how they played and were tactically outfoxed by teams who prepared specifically to beat them."*
 
 True label: `hot_take` | Predicted: `analysis`
@@ -185,6 +191,7 @@ True label: `hot_take` | Predicted: `analysis`
 This post has a causal structure ("the reason X is Y") and references specific opponents and a real event (2022 World Cup), which are surface signals the model associates with `analysis`. But "arrogance" is asserted, not evidenced — there are no quotes, no tactical specifics, no match data. The model latched onto the structured causal framing and missed that the core claim is entirely unsupported.
 
 **Error 2 — `hot_take` predicted as `analysis`:**
+
 > *"Roberto Mancini's coaching career is built entirely on the Inter and City squads he inherited or recruited. His tactical output — the actual drawings, substitutions, and in-game adjustments — is unremarkable. The credit belongs to the scouts and the owners' money."*
 
 True label: `hot_take` | Predicted: `analysis`
@@ -192,6 +199,7 @@ True label: `hot_take` | Predicted: `analysis`
 This reads like a structured argument — it distinguishes between "recruited squads" vs. "tactical output" and makes a specific counter-claim about where credit belongs. This is exactly the stat-backed hot take edge case: the post sounds analytical but argues entirely by assertion. No tactical data, no match statistics, no historical comparison supports the claim. A 147-example training set is not large enough to teach the model this subtle distinction.
 
 **Error 3 — `hot_take` predicted as `reaction`:**
+
 > *"Haaland won't age well. His entire game is brute force physical dominance — pace and power. Once that fades at 28–29, he has no technical fallback. He'll drop off a cliff."*
 
 True label: `hot_take` | Predicted: `reaction`
@@ -208,13 +216,13 @@ The two main levers: (1) increase the dataset from ~200 to 500+ examples with de
 
 The following examples illustrate the model's behavior on the test set:
 
-| Post (truncated) | True Label | Predicted | Confidence |
-|---|---|---|---|
-| *"City's PPDA has gone from 9.2 to 14.6 since Rodri's injury — they're pressing without cover and conceding 3+ in consecutive away games."* | analysis | **analysis** ✓ | 0.97 |
-| *"HE SCORED FROM THAT ANGLE?? BELLINGHAM IS ACTUALLY INSANE. I have no words. Best player on the planet right now."* | reaction | **reaction** ✓ | 0.99 |
-| *"The idea that players owe loyalty to a club is one of the most embarrassing myths in football. Clubs sell players the instant it makes financial sense. Players are employees. They owe nothing."* | hot_take | **hot_take** ✓ | 0.79 |
-| *"The reason Germany lost to Japan and Costa Rica at the 2022 World Cup is simple: their arrogance. They were tactically outfoxed by teams who prepared specifically to beat them."* | hot_take | **analysis** ✗ | 0.68 |
-| *"Arsenal's front three works against high defensive lines because Saka drifts inside to create a central overload while Martinelli holds width. This rotational pattern has generated 3.2 xG per game in their last four away fixtures."* | analysis | **analysis** ✓ | 0.96 |
+| Post (truncated)                                                                                                                                                                                                                             | True Label | Predicted             | Confidence |
+| -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------- | --------------------- | ---------- |
+| *"City's PPDA has gone from 9.2 to 14.6 since Rodri's injury — they're pressing without cover and conceding 3+ in consecutive away games."*                                                                                               | analysis   | **analysis** ✓ | 0.97       |
+| *"HE SCORED FROM THAT ANGLE?? BELLINGHAM IS ACTUALLY INSANE. I have no words. Best player on the planet right now."*                                                                                                                       | reaction   | **reaction** ✓ | 0.99       |
+| *"The idea that players owe loyalty to a club is one of the most embarrassing myths in football. Clubs sell players the instant it makes financial sense. Players are employees. They owe nothing."*                                       | hot_take   | **hot_take** ✓ | 0.79       |
+| *"The reason Germany lost to Japan and Costa Rica at the 2022 World Cup is simple: their arrogance. They were tactically outfoxed by teams who prepared specifically to beat them."*                                                       | hot_take   | **analysis** ✗ | 0.68       |
+| *"Arsenal's front three works against high defensive lines because Saka drifts inside to create a central overload while Martinelli holds width. This rotational pattern has generated 3.2 xG per game in their last four away fixtures."* | analysis   | **analysis** ✓ | 0.96       |
 
 The first prediction is a good example of the model working as intended: the post cites specific metrics (PPDA values, consecutive match results), ties them to a tactical cause, and arrives at a conclusion that stands without emotional framing. The model correctly identifies this as `analysis` with high confidence.
 
@@ -251,6 +259,7 @@ This gap is not a failure of labeling — the labels are consistent. It's a gap 
 **Requirements:** Google Colab (T4 GPU runtime), Python 3.10+
 
 **Dependencies installed by notebook:**
+
 ```
 pip install groq python-dotenv
 ```
@@ -258,6 +267,7 @@ pip install groq python-dotenv
 HuggingFace `transformers`, `datasets`, `torch`, `sklearn`, `pandas`, `matplotlib` are pre-installed on Colab.
 
 **Steps:**
+
 1. Open `ai201_project3_takemeter_starter_clean.ipynb` in Google Colab
 2. Set runtime to T4 GPU: Runtime → Change runtime type → T4 GPU
 3. Add your Groq API key to Colab Secrets (key name: `GROQ_API_KEY`)
@@ -269,5 +279,6 @@ HuggingFace `transformers`, `datasets`, `torch`, `sklearn`, `pandas`, `matplotli
 9. Run Section 6 (comparison — generates `evaluation_results.json`)
 
 **Output files:**
+
 - `confusion_matrix.png` — confusion matrix on test set (committed to repo)
 - `evaluation_results.json` — accuracy, F1, label map (committed to repo)
